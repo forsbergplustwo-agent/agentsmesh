@@ -24,6 +24,7 @@ import {
   generateHooksFeature,
   generateScopedSettingsFeature,
 } from './optional-features.js';
+import { generateFilesFeature } from './files-feature.js';
 import type { TargetLayoutScope } from '../../targets/catalog/target-descriptor.js';
 
 export interface GenerateContext {
@@ -85,6 +86,11 @@ export async function generate(ctx: GenerateContext): Promise<GenerateResult[]> 
 
   await runFeature('ignore');
 
+  // Native `files`: repo-root copy, once, outside the per-target loop.
+  if (config.features.includes('files')) {
+    await generateFilesFeature(results, canonical, projectRoot);
+  }
+
   // Per-target scope extras (e.g. Claude Code output-styles in global mode)
   const enabledFeatures: ReadonlySet<string> = new Set(config.features);
   for (const target of targets) {
@@ -118,7 +124,7 @@ export async function generate(ctx: GenerateContext): Promise<GenerateResult[]> 
     );
   }
 
-  // Decoration must run before reference rewriting so that renderPrimaryRootInstruction output
+  // Decorators must run before reference rewriting so that renderPrimaryRootInstruction output
   // (which uses canonical body verbatim) gets its canonical paths rewritten to target paths.
   const decoratedResults = decoratePrimaryRootInstructions(results, canonical, scope);
   const sharedPaths = computeSharedRootInstructionPaths(decoratedResults, scope);

@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import { writeFileAtomic } from '../../utils/filesystem/fs.js';
 import { acquireProcessLock } from '../../utils/filesystem/process-lock.js';
 import { cleanupStaleGeneratedOutputs } from '../../core/generate/stale-cleanup.js';
+import { cleanupStaleFileOutputs } from '../../core/generate/file-outputs-cleanup.js';
+import { fileOutputPaths } from '../../core/generate/files-feature.js';
 import { assertOutputBoundary, ensureSafeOutputPath } from './generate-path.js';
 import { writeLockFile } from './generate-lock.js';
 import { isFilteredRun } from './generate-empty-run.js';
@@ -90,16 +92,15 @@ export async function handleGenerateOrDryRun(
       for (const r of results) {
         if (r.status === 'created' || r.status === 'updated') {
           const fullPath = await ensureSafeOutputPath(context.rootBase, r.path, r.target);
-          await writeFileAtomic(fullPath, r.content);
+          await writeFileAtomic(
+            fullPath,
+            r.content,
+            r.mode !== undefined ? { mode: r.mode } : undefined,
+          );
         }
       }
-      // The lock on disk is still the PREVIOUS run's until `writeLockFile`
-      // below, so its outputs map is exactly the provenance the sweep needs.
-      // Absent (fresh project, or a lock predating the map) → an empty set, so
-      // the sweep deletes nothing this run and provenance exists from the next
-      // one on. The alternative — deleting on missing provenance — is the bug
-      // itself, and it lands hardest on first-run and just-upgraded users.
       const previousLock = await readLock(context.canonicalDir);
+      const currentFileOutputs = fileOutputPaths(results);
       await cleanupStaleGeneratedOutputs({
         projectRoot: context.rootBase,
         targets: activeTargets,
@@ -108,12 +109,18 @@ export async function handleGenerateOrDryRun(
         generatedOutputs: Object.keys(previousLock?.outputs ?? {}),
         inactiveTargets,
       });
+      await cleanupStaleFileOutputs({
+        projectRoot: context.rootBase,
+        previous: previousLock?.fileOutputs ?? [],
+        expected: currentFileOutputs,
+      });
       lockWritten = await writeLockFile(
         context,
         resolvedExtends,
         buildOutputChecksums(results),
         isFilteredRun(flags),
         inactiveTargets,
+        currentFileOutputs,
       );
     }
   } finally {
