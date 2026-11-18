@@ -49,6 +49,7 @@ export function mergeCanonicalFiles(
       ? combineHooks(base.hooks, overlay.hooks)
       : overrideHooks(base.hooks, overlay.hooks);
   const ignore = mergeUniqueStrings(base.ignore, overlay.ignore);
+  const files = mergeByKey(base.files ?? [], overlay.files ?? [], (f) => f.path);
 
   return {
     rules: mergeByKey(base.rules, overlay.rules, ruleSlug),
@@ -59,6 +60,7 @@ export function mergeCanonicalFiles(
     permissions,
     hooks,
     ignore,
+    files,
   };
 }
 
