@@ -72,5 +72,18 @@ export function applyExtendPick(
     }
   }
 
+  if (pick.files?.length && features.includes('files')) {
+    const wanted = new Set(pick.files);
+    const prev = next.files ?? [];
+    next = { ...next, files: prev.filter((f) => wanted.has(f.path)) };
+    for (const n of pick.files) {
+      if (!prev.some((f) => f.path === n)) {
+        logger.warn(
+          `[agentsmesh] pick name "${n}" not found in files from extend "${extendName}".`,
+        );
+      }
+    }
+  }
+
   return next;
 }
