@@ -104,6 +104,21 @@ export interface Permissions {
 /** Ignore patterns (gitignore syntax lines) */
 export type IgnorePatterns = string[];
 
+/**
+ * A whole-file template from `.agentsmesh/files/<output path>`.
+ * Copied byte-for-byte to the repo root (not per-target).
+ */
+export interface CanonicalTemplateFile {
+  /** Repo-root-relative POSIX output path (e.g. `mise.toml`, `.gitignore`). */
+  path: string;
+  /** Absolute source path under `.agentsmesh/files/`. */
+  source: string;
+  /** File content (text LF-normalized on write; binary via latin1 round-trip). */
+  content: string;
+  /** POSIX permission bits from the source (`mode & 0o777`). */
+  mode?: number;
+}
+
 /** All canonical files loaded from .agentsmesh/ */
 export interface CanonicalFiles {
   rules: CanonicalRule[];
@@ -114,4 +129,9 @@ export interface CanonicalFiles {
   permissions: Permissions | null;
   hooks: Hooks | null;
   ignore: IgnorePatterns;
+  /**
+   * Whole-file templates. Optional so existing fixtures keep typechecking;
+   * loaders/merge always set an array (empty when the feature is unused).
+   */
+  files?: CanonicalTemplateFile[];
 }
