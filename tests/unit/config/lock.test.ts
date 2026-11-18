@@ -312,7 +312,6 @@ describe('buildPackChecksums', () => {
   it('skips directories without valid pack.yaml', async () => {
     const packsDir = join(TEST_DIR, 'packs');
     mkdirSync(join(packsDir, 'bad-pack'), { recursive: true });
-    // no pack.yaml
     const sums = await buildPackChecksums(packsDir);
     expect(Object.keys(sums)).toHaveLength(0);
   });
@@ -351,6 +350,17 @@ describe('buildExtendChecksums', () => {
       { name: 'company-base', resolvedPath: '/any/path', version: 'v2.1.0' },
     ]);
     expect(sums['company-base']).toBe('v2.1.0');
+  });
+
+  it('includes path: in the local fingerprint so nested path changes invalidate', async () => {
+    const extDir = join(TEST_DIR, 'path-ext');
+    mkdirSync(join(extDir, '.agentsmesh', 'rules'), { recursive: true });
+    writeFileSync(join(extDir, '.agentsmesh', 'rules', '_root.md'), '# Shared\n');
+    const without = await buildExtendChecksums([{ name: 'base', resolvedPath: extDir }]);
+    const withPath = await buildExtendChecksums([
+      { name: 'base', resolvedPath: extDir, path: 'packs/skills' },
+    ]);
+    expect(without.base).not.toBe(withPath.base);
   });
 });
 
