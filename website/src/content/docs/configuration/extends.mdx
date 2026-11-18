@@ -52,7 +52,7 @@ extends:
 | `features` | `string[]` | No | Which features to inherit. Omit to inherit all. |
 | `path` | `string` | No | Subdirectory within the source to look for config. |
 | `pick` | `object` | No | Cherry-pick specific named resources. |
-| `accept` | `string[]` | No | Consent to keep elevated artifacts (`hooks`, `permissions`, `mcp`) from a **remote** source. Stripped by default; ignored for local sources. |
+| `accept` | `string[]` | No | Consent to keep elevated artifacts (`hooks`, `permissions`, `mcp`, `files`) from a **remote** source. Stripped by default; ignored for local sources. |
 
 ## Source formats
 
@@ -67,7 +67,8 @@ extends:
 
 ## Cherry-picking specific resources
 
-Use `pick` to inherit only specific named rules, commands, or agents from a source:
+Use `pick` to inherit only specific named rules, commands, agents, skills, or
+`files` output paths from a source:
 
 ```yaml
 extends:
@@ -119,7 +120,7 @@ AgentsMesh applies the following limits to every `extends:` and `install` fetch:
 
 ## Elevated artifacts from remote sources
 
-`hooks`, `permissions`, and `mcp` control local code execution at generate time — a remote source that ships them effectively gets to run commands on your machine the next time the target agent fires the matching event. So when an `extends` source is **remote** (`github:`, `gitlab:`, `git+…`, including `git+file://`), those three artifacts are **stripped by default**, even when listed in `features`. A warning reports what was dropped.
+`hooks`, `permissions`, and `mcp` control local code execution at generate time — a remote source that ships them effectively gets to run commands on your machine the next time the target agent fires the matching event. `files` writes arbitrary paths into the repo root. So when an `extends` source is **remote** (`github:`, `gitlab:`, `git+…`, including `git+file://`), those artifacts are **stripped by default**, even when listed in `features`. A warning reports what was dropped.
 
 To merge them, opt in per-artifact with `accept:` on the entry — only what you list is kept:
 
@@ -127,8 +128,8 @@ To merge them, opt in per-artifact with `accept:` on the entry — only what you
 extends:
   - name: company-base
     source: github:my-org/ai-config@v1.0.0
-    features: [rules, hooks, permissions, mcp]
-    accept: [hooks, permissions, mcp]
+    features: [rules, hooks, permissions, mcp, files]
+    accept: [hooks, permissions, mcp, files]
 ```
 
 **Local** extends (e.g. `../shared-config`) are trusted as-is and ignore `accept` — you already control those bytes. This mirrors the `--accept-*` flags on [`agentsmesh install`](../../cli/install/).
