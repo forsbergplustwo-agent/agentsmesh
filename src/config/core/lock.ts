@@ -25,6 +25,7 @@ const CANONICAL_PATTERNS = [
   (r: string) => r === 'permissions.yaml',
   (r: string) => r === 'hooks.yaml',
   (r: string) => r === 'ignore',
+  (r: string) => r.startsWith('files/'),
 ];
 
 function isCanonical(relPath: string): boolean {
@@ -41,7 +42,16 @@ const FEATURE_PATTERNS: Record<string, (path: string) => boolean> = {
   permissions: (path) => path === 'permissions.yaml',
   hooks: (path) => path === 'hooks.yaml',
   ignore: (path) => path === 'ignore',
+  files: (path) => path.startsWith('files/'),
 };
+
+function parseFileOutputs(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const paths = raw
+    .filter((p): p is string => typeof p === 'string')
+    .map((p) => p.replaceAll('\\', '/'));
+  return paths.length > 0 ? [...paths].sort() : [];
+}
 
 /** Read `.agentsmesh/.lock`; null when it is missing or cannot be parsed. */
 export async function readLock(abDir: string): Promise<LockFile | null> {
@@ -58,6 +68,7 @@ export async function readLock(abDir: string): Promise<LockFile | null> {
       extends?: Record<string, string>;
       packs?: Record<string, string>;
       outputs?: Record<string, string>;
+      file_outputs?: unknown;
       stale_targets?: unknown;
     };
     if (!raw || typeof raw !== 'object') return null;
@@ -70,6 +81,7 @@ export async function readLock(abDir: string): Promise<LockFile | null> {
       packs: raw.packs && typeof raw.packs === 'object' ? raw.packs : {},
       // undefined (not {}) when absent → old-format lock; skips output check.
       outputs: raw.outputs && typeof raw.outputs === 'object' ? raw.outputs : undefined,
+      fileOutputs: parseFileOutputs(raw.file_outputs),
       staleTargets: parseStaleTargets(raw.stale_targets),
     };
   } catch {
@@ -89,6 +101,7 @@ export async function writeLock(abDir: string, lock: LockFile): Promise<void> {
     packs: lock.packs,
     // Omit the key entirely when undefined (old-format lock).
     ...(lock.outputs !== undefined ? { outputs: lock.outputs } : {}),
+    ...(lock.fileOutputs !== undefined ? { file_outputs: lock.fileOutputs } : {}),
     ...(lock.staleTargets !== undefined ? { stale_targets: lock.staleTargets } : {}),
   };
   const content =
@@ -165,6 +178,8 @@ export interface ResolvedExtendForLock {
   resolvedPath: string;
   /** Resolved version for remote extends. Store as-is in lock. */
   version?: string;
+  /** Repo-relative discovery path; included in local fingerprints. */
+  path?: string;
 }
 
 /**
@@ -183,9 +198,10 @@ export async function buildExtendChecksums(
     }
     const abDir = join(ext.resolvedPath, '.agentsmesh');
     const checksums = await buildChecksums(abDir);
-    const fingerprint = Object.keys(checksums)
-      .sort()
-      .map((p) => `${p}:${checksums[p]}`)
+    // Include `path:` so nested discovery-path changes invalidate the lock even
+    // when `.agentsmesh` content is unchanged (BUG: path fingerprint).
+    const fingerprint = [`path:${ext.path ?? ''}`]
+      .concat(Object.keys(checksums).sort().map((p) => `${p}:${checksums[p]}`))
       .join('\n');
     const h = hashContent(fingerprint);
     const hex = h.startsWith('sha256:') ? h : `sha256:${h}`;
