@@ -1,6 +1,6 @@
 /**
- * Consent gate for elevated artifacts (`hooks`, `permissions`, `mcp`) coming
- * from an `extends` source. Mirrors the `install` gate
+ * Consent gate for elevated artifacts (`hooks`, `permissions`, `mcp`, `files`)
+ * coming from an `extends` source. Mirrors the `install` gate
  * (`stripUntrustedElevatedArtifacts`): a remote extend (github/gitlab/git,
  * including `git+file://`) ships these only if the entry opts in via `accept:`;
  * a local extend is trusted as-is. The check runs per-extend, before its slice
@@ -34,5 +34,6 @@ export function gateExtendElevatedArtifacts(
     acceptHooks: accept.includes('hooks'),
     acceptPermissions: accept.includes('permissions'),
     acceptMcp: accept.includes('mcp'),
+    acceptFiles: accept.includes('files'),
   });
 }
