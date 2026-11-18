@@ -1,0 +1,65 @@
+---
+title: Files
+description: Whole-file templates copied byte-for-byte to the repo root
+---
+
+# Files
+
+The native `files` feature copies templates from `.agentsmesh/files/` to the
+project root as-is — no templating, no YAML merge, no per-target rewrite.
+Use it for shared whole files such as `mise.toml`, scripts, or a central
+`.gitignore`.
+
+## Layout
+
+```
+.agentsmesh/
+  files/
+    mise.toml              → mise.toml
+    scripts/setup.sh       → scripts/setup.sh
+    dot_gitignore          → .gitignore
+    .gitignore.prepend     (local-only helper; not emitted)
+    .gitignore.append      (local-only helper; not emitted)
+```
+
+- Basename `dot_gitignore` maps to `.gitignore` so a live ignore file never
+  hides the template.
+- Executable bits from the source file are preserved on write.
+- Layer precedence matches other features: extends, then packs, then local
+  (last write wins by output path).
+
+## `.gitignore` prepend / append
+
+`.gitignore` is the one template a project can extend locally. Put shared
+ignore rules in `dot_gitignore` (or an inherited `.gitignore` path). Optional
+local helpers:
+
+| Helper | Role |
+| --- | --- |
+| `.agentsmesh/files/.gitignore.prepend` | Lines inserted **before** the central content |
+| `.agentsmesh/files/.gitignore.append` | Lines inserted **after** the central content |
+
+Helpers are never written as outputs and are never inherited from extends.
+
+## Pick and remote accept
+
+Cherry-pick by **output path**:
+
+```yaml
+extends:
+  - name: org-templates
+    source: github:org/agentsmesh-templates@v1
+    features: [files]
+    pick:
+      files: [mise.toml, .gitignore]
+    accept: [files]
+```
+
+Remote extends strip `files` unless `accept` includes `files` (same consent
+gate as hooks / permissions / mcp).
+
+## Lock and stale cleanup
+
+Generate records every emitted path under lock `file_outputs`. The next run
+deletes previous paths that are no longer picked or present — managed-dir
+sweeps cannot see arbitrary repo-root paths.

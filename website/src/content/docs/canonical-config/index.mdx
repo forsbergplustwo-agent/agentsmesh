@@ -30,6 +30,7 @@ The `.agentsmesh/` directory is the **single source of truth** for all your AI t
   - permissions.yaml  Allow/deny tool lists
   - hooks.yaml  Lifecycle hooks
   - ignore  gitignore-style exclusion patterns
+  - files/  Whole-file templates copied to the repo root
   - installs.yaml  Record of installed packs (managed by CLI)
   - .lock  Generated state checksums (managed by CLI)
 - agentsmesh.yaml  Project configuration
@@ -48,6 +49,7 @@ The `.agentsmesh/` directory is the **single source of truth** for all your AI t
 | [Hooks](./hooks/) | `hooks.yaml` | Lifecycle hooks triggered before/after tool use. |
 | [Ignore Patterns](./ignore-patterns/) | `ignore` | gitignore-style patterns for AI tools to skip. |
 | [Permissions](./permissions/) | `permissions.yaml` | Allow/deny lists for tool operations. |
+| [Files](./files/) | `files/**` | Whole-file templates copied byte-for-byte to the repo root (`mise.toml`, `.gitignore`, scripts). |
 | [Lessons](../../guides/lessons/) | `lessons/lessons.json` | Optional shared agent memory: rules captured after failures, recalled before edits. Managed via `agentsmesh lessons`, never hand-edited. |
 
 ## The generation contract
@@ -58,37 +60,3 @@ AgentsMesh enforces a strict separation between **canonical sources** and **gene
 - **Generated artifacts** live in tool directories (`.claude/`, `.cursor/`, etc.) — the CLI writes these; you should not edit them directly.
 
 When you run `agentsmesh generate`, the CLI reads `.agentsmesh/`, applies per-target transformations, and writes the output. The lock file (`.agentsmesh/.lock`) records checksums of both the canonical sources and every generated file. `agentsmesh check` uses the lock to detect drift in either — including direct hand-edits to generated files.
-
-<Aside type="caution">
-  Never edit generated files directly. If you need to customize per-target output, use `agentsmesh.yaml` overrides or frontmatter fields like `targets` in your canonical files.
-</Aside>
-
-## Syntax errors fail loudly
-
-A syntax error in `mcp.json`, `permissions.yaml`, or `hooks.yaml` stops `generate`, `check`, and `lint` with the file path and the parser message, the same way a broken rule frontmatter does. A broken file is never treated as absent, so a stray trailing comma cannot silently drop your MCP servers from every tool. `install` skips a broken file in third-party content and warns instead.
-
-## What goes in `.gitignore`
-
-AgentsMesh updates `.gitignore` during `init` with these entries:
-
-```txt
-agentsmesh.local.yaml
-.agentsmeshcache
-.agentsmesh/.lock.tmp
-.agentsmesh/packs/
-```
-
-`init --lessons` adds five more — the `.agentsmesh/lessons/recall-log.jsonl`, `capture-log.jsonl` and `outcome-log.jsonl` logs, the `.agentsmesh/lessons/.lessons.lock/` directory, and `.agentsmesh/lessons/*.tmp` — because those are per-machine runtime files, not shared config.
-
-Everything else — the rest of `.agentsmesh/`, generated tool directories, and `agentsmesh.yaml` — should be committed. Generated files are intentionally committed so that team members who don't use AgentsMesh can still benefit from the configs. Note that `.agentsmesh/packs/` is the one exception inside the canonical directory: packs are materialized derivatives of `installs.yaml`, the same way `node_modules/` is a derivative of `package.json`.
-
-## Naming constraints
-
-Canonical filenames flow into target-native paths verbatim, so they must round-trip cleanly across Linux, macOS, and Windows. The parsers reject the following at load time:
-
-- **Windows reserved device names** in any segment — `CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9` (case-insensitive, with or without an extension).
-- **Reserved characters** anywhere in the name — `<`, `>`, `:`, `"`, `|`, `?`, `*`, plus ASCII control chars.
-- **Trailing dot or space** — Windows silently strips these and creates a different file.
-- **Duplicate basenames across nested directories** — for example `agents/foo.md` and `agents/sub/foo.md` would both generate to `<tool>/agents/foo.md` with last-write-wins. The parser raises an actionable error instead.
-
-If you hit a `CanonicalNameError`, rename the offending file to use only `[A-Za-z0-9_-]` characters and ensure each basename is unique within its feature directory.
