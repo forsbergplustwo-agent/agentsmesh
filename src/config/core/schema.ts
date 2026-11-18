@@ -10,6 +10,7 @@ const VALID_FEATURES = [
   'hooks',
   'ignore',
   'permissions',
+  'files',
 ] as const;
 
 /** Valid `extends[].target` / `agentsmesh install --target` identifiers */
@@ -24,6 +25,8 @@ export const extendPickSchema = z
     commands: z.array(z.string()).optional(),
     rules: z.array(z.string()).optional(),
     agents: z.array(z.string()).optional(),
+    /** Repo-root output paths to inherit (e.g. `mise.toml`, `.gitignore`). */
+    files: z.array(z.string()).optional(),
   })
   .strict();
 
@@ -40,12 +43,13 @@ const extendSourceSchema = z.object({
   path: z.string().optional(),
   pick: extendPickSchema.optional(),
   /**
-   * Per-entry consent for "elevated" artifacts (`hooks`, `permissions`, `mcp`)
-   * from a remote source. These control local code execution at generate time,
-   * so for non-local extends they are stripped by default and only merged for
-   * the artifacts listed here. Local extends are trusted and ignore this field.
+   * Per-entry consent for "elevated" artifacts (`hooks`, `permissions`, `mcp`,
+   * `files`) from a remote source. hooks/permissions/mcp control local code
+   * execution; `files` writes arbitrary paths into the repo root. For non-local
+   * extends they are stripped by default and only merged for the artifacts
+   * listed here. Local extends are trusted and ignore this field.
    */
-  accept: z.array(z.enum(['hooks', 'permissions', 'mcp'])).optional(),
+  accept: z.array(z.enum(['hooks', 'permissions', 'mcp', 'files'])).optional(),
 });
 
 const collaborationSchema = z.object({
