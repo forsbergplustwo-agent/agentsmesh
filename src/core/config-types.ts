@@ -14,6 +14,12 @@ export interface LockFile {
    * detection skips output verification in that case.
    */
   outputs?: Record<string, string>;
+  /**
+   * Repo-root paths written by the native `files` feature on the last generate.
+   * Used for stale cleanup of unpicked/removed templates (not covered by
+   * per-target managed-dir sweeps). Forward-slash paths, sorted.
+   */
+  fileOutputs?: string[];
   /** Targets a `generate --targets` run left out after sources changed; see lock-stale-targets.ts. */
   staleTargets?: string[];
 }

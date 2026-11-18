@@ -11,5 +11,6 @@ export const AB_AGENTS = '.agentsmesh/agents';
 export const AB_SKILLS = '.agentsmesh/skills';
 export const AB_MCP = '.agentsmesh/mcp.json';
 export const AB_IGNORE = '.agentsmesh/ignore';
+export const AB_FILES = '.agentsmesh/files';
 export const AB_PERMISSIONS = '.agentsmesh/permissions.yaml';
 export const AB_HOOKS = '.agentsmesh/hooks.yaml';

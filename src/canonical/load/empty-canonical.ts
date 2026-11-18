@@ -11,5 +11,6 @@ export function emptyCanonical(): CanonicalFiles {
     permissions: null,
     hooks: null,
     ignore: [],
+    files: [],
   };
 }

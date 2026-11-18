@@ -12,6 +12,11 @@ export interface GenerateResult {
   status: 'created' | 'updated' | 'unchanged' | 'skipped';
   /** If skipped, why */
   skipReason?: string;
+  /**
+   * Optional POSIX mode for the written file. When set, overrides
+   * `executableModeFor` extension guessing (needed for extensionless executables).
+   */
+  mode?: number;
 }
 
 /** Result of importing from a tool */

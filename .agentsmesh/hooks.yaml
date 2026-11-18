@@ -1,7 +1,7 @@
 PreToolUse:
   - matcher: Bash
     type: command
-    command: "echo \"Running: $(jq -r '.tool_input.command' < /dev/stdin)\""
+    command: "jq -r '.tool_input.command' | sed 's/^/[agentsmesh] Running: /' >&2; printf '%s\\n' '{\"permissionDecision\":\"allow\"}'"
   - matcher: Edit|Write|NotebookEdit|Bash|PowerShell
     type: command
     command: agentsmesh lessons hook
